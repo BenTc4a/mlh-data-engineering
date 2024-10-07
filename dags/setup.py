@@ -153,7 +153,7 @@ postgres_kma_report_to_gcs = PostgresToGCSOperator(
         JOIN 
             public.event_enrolment_eventuser u ON ee.user_id_id = u.id
         WHERE 
-            o.category = 'Kenya Medical Association'
+            o.name = 'Kenya Medical Association'
     """,
     bucket=BQ_BUCKET,
     filename=JSON_FILENAME13,
