@@ -281,18 +281,6 @@ load_kma_csv_data_to_bq = GCSToBigQueryOperator(
 )
 
 
-load_kma_csv_data_to_bq = GCSToBigQueryOperator(
-    task_id="load_kma_csv_data_to_bq",
-    bucket=BQ_BUCKET,
-    source_objects=[JSON_FILENAME13],
-    destination_project_dataset_table=f"{BQ_PROJECT}.{BQ_DATASET}.{BQ_TABLE13}",
-    create_disposition='CREATE_IF_NEEDED',
-    write_disposition="WRITE_TRUNCATE",
-    gcp_conn_id=BQ_CON_ID,
-    max_bad_records=100,
-    dag=dag,
-)
-
 load_csv_hospital_data_to_bq = GCSToBigQueryOperator(
     task_id="load_csv_hospital_data_to_bq",
     bucket=BQ_BUCKET,
@@ -348,7 +336,7 @@ load_csv_ngo_data_to_bq = GCSToBigQueryOperator(
 
 # Transform >> to perform filtering, aggregation and joining
 
-postgres_ngo_report_to_gcs  >> load_kma_csv_data_to_bq
+postgres_ngo_report_to_gcs  >> load_csv_ngo_data_to_bq
 
 postgres_hospital_report_to_gcs >> load_csv_hospital_data_to_bq
 
