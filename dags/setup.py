@@ -80,54 +80,6 @@ print(f"Table: {BQ_TABLE1}")
 
 # Data Extraction
 # Task to transfer data from postgres to Google cloud platform
-# postgres_pskenya_report_to_gcs = PostgresToGCSOperator(
-#     task_id='postgres_pskenya_report_to_gcs',
-#     sql="""
-#         SELECT
-#             webinar_id AS webinar_id,
-#             eu.specializations_id AS health_areas,
-#             ee.attended,
-#             name AS original_name,
-#             e.name AS event_name AS webinar_topic,
-#             eu.first_name, 
-#             eu.last_name,
-#             eu.email,
-#             ee.duration AS time_in_session_minutes,
-#             eu.profession,
-#             eu.country,
-#             eu.state AS county,
-#             workplace AS work_place,
-#             mfl_code,
-#             facility_type AS type_of_facility,
-#             facility_level AS level_of_facility,
-#             title AS job_title
-#             to_char(ee.enrollment_date, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS registration_time,
-           
-#             o.name AS organization_name, 
-            
-#         FROM 
-#             public.event_enrolment_eventenrollment ee
-#         JOIN 
-#             public.event_enrolment_eventuser eu ON ee.user_id_id = eu.id
-#         JOIN 
-#             public.events_event e ON ee.event_id_id = e.id
-#         JOIN 
-#             public.organization_organization o ON e.organization_id_id = o.id
-#         WHERE 
-#             o.name='Population Services Kenya'
-#     """,
-#     bucket=BQ_BUCKET,
-#     filename=JSON_FILENAME8,
-#     export_format='csv',
-#     postgres_conn_id=PG_CON_ID,
-#     field_delimiter=',',
-#     gzip=False,
-#     task_concurrency=1,
-#     execution_timeout=timedelta(minutes=10),
-#     gcp_conn_id=BQ_CON_ID,
-#     dag=dag,
-# )
-
 
 postgres_kma_report_to_gcs = PostgresToGCSOperator(
     task_id='postgres_report_kma_to_gcs',
@@ -153,7 +105,7 @@ postgres_kma_report_to_gcs = PostgresToGCSOperator(
         JOIN 
             public.event_enrolment_eventuser u ON ee.user_id_id = u.id
         WHERE 
-            o.category = 'Kenya Medical Association'
+            o.name = 'Kenya Medical Association'
     """,
     bucket=BQ_BUCKET,
     filename=JSON_FILENAME13,
@@ -167,132 +119,154 @@ postgres_kma_report_to_gcs = PostgresToGCSOperator(
     dag=dag,
 )
 
-# postgres_hospital_report_to_gcs = PostgresToGCSOperator(
-#     task_id='postgres_hospital_report_to_gcs',
-#      sql="""
-#         SELECT
-#             o.name AS organization_name,
-#             '"' || z.event_name || '"' AS event_name,
-#             z.name,
-#             z.email,
-#             z.profession,
-#             z.country,
-#             z.county,
-#             z.duration,
-#             z.board_number,
-#             z.specialization,
-#             z.gender,
-#             z.location,
-#             z.attended,
-#             z.organization_category,
-#             to_char(z.start_time, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS registration_timee
-#         FROM 
-#             (SELECT *
-#             FROM public.stream_zoomreports
-#             WHERE organization_category = 'hospital') z
-#         JOIN 
-#             public.organization_organization o ON z.organization_id_id = o.id
-#     """,
-#     bucket=BQ_BUCKET,
-#     filename=JSON_FILENAME10,
-#     export_format='csv',
-#     postgres_conn_id=PG_CON_ID,
-#     field_delimiter=',',
-#     gzip=False,
-#     task_concurrency=1,
-#     execution_timeout=timedelta(minutes=10),
-#     gcp_conn_id=BQ_CON_ID,
-#     dag=dag,
-# )
+postgres_ngo_report_to_gcs = PostgresToGCSOperator(
+    task_id='postgres_ngo_report_to_gcs',
+     sql="""
+        SELECT
+            o.name AS organization_name,
+            '"' || z.event_name || '"' AS event_name,
+            z.name,
+            z.email,
+            z.profession,
+            z.country,
+            z.county,
+            z.duration,
+            z.board_number,
+            z.specialization,
+            z.gender,
+            z.location,
+            z.attended,
+            z.organization_category
+        FROM 
+            public.stream_zoomreports z
+        JOIN 
+            public.organization_organization o ON z.organization_id_id = o.id
+		WHERE
+			organization_category = 'ngo'
+    """,
+    bucket=BQ_BUCKET,
+    filename=JSON_FILENAME9,
+    export_format='csv',
+    postgres_conn_id=PG_CON_ID,
+    field_delimiter=',',
+    gzip=False,
+    task_concurrency=1,
+    execution_timeout=timedelta(minutes=10),
+    gcp_conn_id=BQ_CON_ID,
+    dag=dag,
+)
 
-# postgres_pharma_report_to_gcs = PostgresToGCSOperator(
-#     task_id='postgres_pharma_report_to_gcs',
-#     sql="""
-#         SELECT
-#             o.name AS organization_name,
-#             '"' || z.event_name || '"' AS event_name,
-#             z.name,
-#             z.email,
-#             z.profession,
-#             z.country,
-#             z.county,
-#             z.duration,
-#             z.board_number,
-#             z.specialization,
-#             z.gender,
-#             z.location,
-#             z.attended,
-#             z.organization_category,
-#             to_char(z.start_time, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS registration_time
-#         FROM 
-#             (SELECT *
-#             FROM public.stream_zoomreports
-#             WHERE organization_category = 'pharma') z
-#         JOIN 
-#             public.organization_organization o ON z.organization_id_id = o.id
-#     """,
-#     bucket=BQ_BUCKET,
-#     filename=JSON_FILENAME11,
-#     export_format='csv',
-#     postgres_conn_id=PG_CON_ID,
-#     field_delimiter=',',
-#     gzip=False,
-#     task_concurrency=1,
-#     execution_timeout=timedelta(minutes=10),
-#     gcp_conn_id=BQ_CON_ID,
-#     dag=dag,
-# )
+postgres_hospital_report_to_gcs = PostgresToGCSOperator(
+    task_id='postgres_hospital_report_to_gcs',
+     sql="""
+        SELECT
+            o.name AS organization_name,
+            '"' || z.event_name || '"' AS event_name,
+            z.name,
+            z.email,
+            z.profession,
+            z.country,
+            z.county,
+            z.duration,
+            z.board_number,
+            z.specialization,
+            z.gender,
+            z.location,
+            z.attended,
+            z.organization_category
+        FROM 
+            public.stream_zoomreports z
+        JOIN 
+            public.organization_organization o ON z.organization_id_id = o.id
+		WHERE
+			organization_category = 'hospital'
+    """,
+    bucket=BQ_BUCKET,
+    filename=JSON_FILENAME10,
+    export_format='csv',
+    postgres_conn_id=PG_CON_ID,
+    field_delimiter=',',
+    gzip=False,
+    task_concurrency=1,
+    execution_timeout=timedelta(minutes=10),
+    gcp_conn_id=BQ_CON_ID,
+    dag=dag,
+)
 
-# postgres_association_report_to_gcs = PostgresToGCSOperator(
-#     task_id='postgres_association_report_to_gcs',
-#     sql="""
-#         SELECT
-#             o.name AS organization_name,
-#             '"' || z.event_name || '"' AS event_name,
-#             z.name,
-#             z.email,
-#             z.profession,
-#             z.country,
-#             z.county,
-#             z.duration,
-#             z.board_number,
-#             z.specialization,
-#             z.gender,
-#             z.location,
-#             z.attended,
-#             z.organization_category,
-#             to_char(z.start_time, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS registration_time
-#         FROM 
-#             (SELECT *
-#             FROM public.stream_zoomreports
-#             WHERE organization_category = 'association') z
-#         JOIN 
-#             public.organization_organization o ON z.organization_id_id = o.id
-#     """,
-#     bucket=BQ_BUCKET,
-#     filename=JSON_FILENAME12,
-#     export_format='csv',
-#     postgres_conn_id=PG_CON_ID,
-#     field_delimiter=',',
-#     gzip=False,
-#     task_concurrency=1,
-#     execution_timeout=timedelta(minutes=10),
-#     gcp_conn_id=BQ_CON_ID,
-#     dag=dag,
-# )
+postgres_pharma_report_to_gcs = PostgresToGCSOperator(
+    task_id='postgres_pharma_report_to_gcs',
+    sql="""
+        SELECT
+            o.name AS organization_name,
+            '"' || z.event_name || '"' AS event_name,
+            z.name,
+            z.email,
+            z.profession,
+            z.country,
+            z.county,
+            z.duration,
+            z.board_number,
+            z.specialization,
+            z.gender,
+            z.location,
+            z.attended,
+            z.organization_category
+        FROM 
+            public.stream_zoomreports z
+        JOIN 
+            public.organization_organization o ON z.organization_id_id = o.id
+		WHERE
+			organization_category = 'pharma'
+    """,
+    bucket=BQ_BUCKET,
+    filename=JSON_FILENAME11,
+    export_format='csv',
+    postgres_conn_id=PG_CON_ID,
+    field_delimiter=',',
+    gzip=False,
+    task_concurrency=1,
+    execution_timeout=timedelta(minutes=10),
+    gcp_conn_id=BQ_CON_ID,
+    dag=dag,
+)
 
-# send data to bigquery
-# load_csv_pskenya_data_to_bq = GCSToBigQueryOperator(
-#     task_id="load_csv_pskenya_data_to_bq",
-#     bucket=BQ_BUCKET,
-#     source_objects=[JSON_FILENAME8],
-#     destination_project_dataset_table=f"{BQ_PROJECT}.{BQ_DATASET}.{BQ_TABLE8}",
-#     create_disposition='CREATE_IF_NEEDED',
-#     write_disposition="WRITE_TRUNCATE",
-#     gcp_conn_id=BQ_CON_ID,
-#     max_bad_records=100,
-#     dag=dag,
-# )
+postgres_association_report_to_gcs = PostgresToGCSOperator(
+    task_id='postgres_association_report_to_gcs',
+    sql="""
+        SELECT
+            o.name AS organization_name,
+            '"' || z.event_name || '"' AS event_name,
+            z.name,
+            z.email,
+            z.profession,
+            z.country,
+            z.county,
+            z.duration,
+            z.board_number,
+            z.specialization,
+            z.gender,
+            z.location,
+            z.attended,
+            z.organization_category
+        FROM 
+            public.stream_zoomreports z
+        JOIN 
+            public.organization_organization o ON z.organization_id_id = o.id
+		WHERE
+			organization_category = 'association'
+    """,
+    bucket=BQ_BUCKET,
+    filename=JSON_FILENAME12,
+    export_format='csv',
+    postgres_conn_id=PG_CON_ID,
+    field_delimiter=',',
+    gzip=False,
+    task_concurrency=1,
+    execution_timeout=timedelta(minutes=10),
+    gcp_conn_id=BQ_CON_ID,
+    dag=dag,
+)
+
 
 load_kma_csv_data_to_bq = GCSToBigQueryOperator(
     task_id="load_kma_csv_data_to_bq",
@@ -306,54 +280,81 @@ load_kma_csv_data_to_bq = GCSToBigQueryOperator(
     dag=dag,
 )
 
-# load_csv_hospital_data_to_bq = GCSToBigQueryOperator(
-#     task_id="load_csv_hospital_data_to_bq",
-#     bucket=BQ_BUCKET,
-#     source_objects=[JSON_FILENAME10],
-#     destination_project_dataset_table=f"{BQ_PROJECT}.{BQ_DATASET}.{BQ_TABLE10}",
-#     create_disposition='CREATE_IF_NEEDED',
-#     write_disposition="WRITE_TRUNCATE",
-#     gcp_conn_id=BQ_CON_ID,
-#     max_bad_records=100,
-#     dag=dag,
-# )
+
+load_kma_csv_data_to_bq = GCSToBigQueryOperator(
+    task_id="load_kma_csv_data_to_bq",
+    bucket=BQ_BUCKET,
+    source_objects=[JSON_FILENAME13],
+    destination_project_dataset_table=f"{BQ_PROJECT}.{BQ_DATASET}.{BQ_TABLE13}",
+    create_disposition='CREATE_IF_NEEDED',
+    write_disposition="WRITE_TRUNCATE",
+    gcp_conn_id=BQ_CON_ID,
+    max_bad_records=100,
+    dag=dag,
+)
+
+load_csv_hospital_data_to_bq = GCSToBigQueryOperator(
+    task_id="load_csv_hospital_data_to_bq",
+    bucket=BQ_BUCKET,
+    source_objects=[JSON_FILENAME10],
+    destination_project_dataset_table=f"{BQ_PROJECT}.{BQ_DATASET}.{BQ_TABLE10}",
+    create_disposition='CREATE_IF_NEEDED',
+    write_disposition="WRITE_TRUNCATE",
+    gcp_conn_id=BQ_CON_ID,
+    max_bad_records=100,
+    dag=dag,
+)
 
 
-# load_csv_pharma_data_to_bq = GCSToBigQueryOperator(
-#     task_id="load_csv_pharma_data_to_bq",
-#     bucket=BQ_BUCKET,
-#     source_objects=[JSON_FILENAME11],
-#     destination_project_dataset_table=f"{BQ_PROJECT}.{BQ_DATASET}.{BQ_TABLE11}",
-#     create_disposition='CREATE_IF_NEEDED',
-#     write_disposition="WRITE_TRUNCATE",
-#     gcp_conn_id=BQ_CON_ID,
-#     max_bad_records=100,
-#     dag=dag,
-# )
+load_csv_pharma_data_to_bq = GCSToBigQueryOperator(
+    task_id="load_csv_pharma_data_to_bq",
+    bucket=BQ_BUCKET,
+    source_objects=[JSON_FILENAME11],
+    destination_project_dataset_table=f"{BQ_PROJECT}.{BQ_DATASET}.{BQ_TABLE11}",
+    create_disposition='CREATE_IF_NEEDED',
+    write_disposition="WRITE_TRUNCATE",
+    gcp_conn_id=BQ_CON_ID,
+    max_bad_records=100,
+    dag=dag,
+)
 
-# load_csv_association_data_to_bq = GCSToBigQueryOperator(
-#     task_id="load_csv_association_data_to_bq",
-#     bucket=BQ_BUCKET,
-#     source_objects=[JSON_FILENAME12],
-#     destination_project_dataset_table=f"{BQ_PROJECT}.{BQ_DATASET}.{BQ_TABLE12}",
-#     create_disposition='CREATE_IF_NEEDED',
-#     write_disposition="WRITE_TRUNCATE",
-#     gcp_conn_id=BQ_CON_ID,
-#     max_bad_records=100,
-#     dag=dag,
-# )
+load_csv_association_data_to_bq = GCSToBigQueryOperator(
+    task_id="load_csv_association_data_to_bq",
+    bucket=BQ_BUCKET,
+    source_objects=[JSON_FILENAME12],
+    destination_project_dataset_table=f"{BQ_PROJECT}.{BQ_DATASET}.{BQ_TABLE12}",
+    create_disposition='CREATE_IF_NEEDED',
+    write_disposition="WRITE_TRUNCATE",
+    gcp_conn_id=BQ_CON_ID,
+    max_bad_records=100,
+    dag=dag,
+)
+
+load_csv_ngo_data_to_bq = GCSToBigQueryOperator(
+    task_id="load_csv_ngo_data_to_bq",
+    bucket=BQ_BUCKET,
+    source_objects=[JSON_FILENAME9],
+    destination_project_dataset_table=f"{BQ_PROJECT}.{BQ_DATASET}.{BQ_TABLE9}",
+    create_disposition='CREATE_IF_NEEDED',
+    write_disposition="WRITE_TRUNCATE",
+    gcp_conn_id=BQ_CON_ID,
+    max_bad_records=100,
+    dag=dag,
+)
+
 
 
 
 
 # Transform >> to perform filtering, aggregation and joining
 
+postgres_ngo_report_to_gcs  >> load_kma_csv_data_to_bq
+
+postgres_hospital_report_to_gcs >> load_csv_hospital_data_to_bq
+
+postgres_pharma_report_to_gcs >> load_csv_pharma_data_to_bq
+
+postgres_association_report_to_gcs >> load_csv_association_data_to_bq
+
 postgres_kma_report_to_gcs >> load_kma_csv_data_to_bq
-
-# postgres_pskenya_report_to_gcs >> load_csv_pskenya_data_to_bq
-
-# postgres_pharma_report_to_gcs >> load_csv_pharma_data_to_bq
-
-# postgres_association_report_to_gcs >> load_csv_association_data_to_bq
-
 
