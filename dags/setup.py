@@ -120,7 +120,7 @@ postgres_kma_report_to_gcs = PostgresToGCSOperator(
 )
 
 postgres_ngo_report_to_gcs = PostgresToGCSOperator(
-    task_id='postgres_hospital_report_to_gcs',
+    task_id='postgres_ngo_report_to_gcs',
      sql="""
         SELECT
             o.name AS organization_name,
@@ -145,7 +145,7 @@ postgres_ngo_report_to_gcs = PostgresToGCSOperator(
 			organization_category = 'ngo'
     """,
     bucket=BQ_BUCKET,
-    filename=JSON_FILENAME10,
+    filename=JSON_FILENAME9,
     export_format='csv',
     postgres_conn_id=PG_CON_ID,
     field_delimiter=',',
