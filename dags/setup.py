@@ -29,10 +29,10 @@ dag = DAG(
 BQ_CON_ID = "gcp_connection"
 BQ_PROJECT = "visualization-app-404406"
 BQ_DATASET = "tc4a"
-BQ_TABLE1 = "bq_NGO"
-BQ_TABLE2 = "bq_Hospitals"
-BQ_TABLE3 = "bq_Pharmas"
-BQ_TABLE4 = "bq_Associations"
+BQ_TABLE1 = "bq_ngo"
+BQ_TABLE2 = "bq_hospitals"
+BQ_TABLE3 = "bq_pharmas"
+BQ_TABLE4 = "bq_associations"
 BQ_BUCKET = 'tc4a-backet'
 
 # Postgres Config variables
@@ -67,9 +67,23 @@ def standardize_country_name(country_name):
         return country_name.strip().title()
     return country_name
 
+def sanitize_gender(gender):
+    """
+    Function to sanitize the gender field.
+    Maps 'male' to 'Male', 'female' to 'Female',
+    and handles null or empty values by assigning 'Other'.
+    """
+    if pd.isna(gender) or gender.strip() == '':
+        return 'Other'
+    gender = gender.strip().capitalize()
+    if gender.lower() in ['male', 'female']:
+        return gender.capitalize()
+    return 'Other'
+
 def sanitize_field_name(name):
     # Replace unsupported characters with underscores
-    return name.replace(' ', '_').replace('/', '_').replace('-', '_').replace('?', '').replace('.', '').replace('(', '').replace(')', '').lower()
+    return name.replace(' ', '_').replace('/', '_').replace('-', '_').replace('?', '') \
+        .replace('.', '').replace('(', '').replace(')', '').replace(',', '_').lower()
 def merge_columns(df, new_col_name, columns_to_merge):
     existing_columns = [col for col in columns_to_merge if col in df.columns]
     if existing_columns:
@@ -104,21 +118,41 @@ def transform_data(entity):
 
     df = df.apply(extract_json_to_columns, axis=1)
 
+    if 'gender' in df.columns:
+        df['gender'] = df['gender'].apply(sanitize_gender)
+
     if 'country_region_name' in df.columns:
         df['country_region_name'] = df['country_region_name'].apply(standardize_country_name)
     if 'country' in df.columns:
         df['country'] = df['country'].apply(standardize_country_name)
 
     df = merge_columns(df, 'phone_number', ['phone_number', 'mobile_no', 'mobile_number',
-                                            'phone_number_for_cpc_issuance_via_sms'])
-    df = merge_columns(df, 'county', ['county___state___region', 'county'])
+                                            'phone_number_for_cpc_issuance_via_sms', 'phone_number_for_cpd_issuance_via_sms',
+                                            'phone', 'mobile'])
+    df = merge_columns(df, 'county', ['county___state___region', 'county', 'state_county_district',
+                                      'county_state_city_district'])
     df = merge_columns(df, 'country', ['country_region_name', 'country'])
-    df = merge_columns(df, 'profession', ['profession___cadres', 'cadre'])
-    df = merge_columns(df, 'registration_number', ['registration_number', 'registration_no'])
+    df = merge_columns(df, 'profession', ['profession___cadres', 'cadre', 'cadre__profession', 'profession',
+                                          'profession_cadre', 'specialization', 'specilization'])
+    df = merge_columns(df, 'job_title', ['industry_job_title', 'job_title'])
+    df = merge_columns(df, 'workplace', ['name_of_the_workplace', 'name_of_equity_afia_working_at_affiliated_with',
+                                         'name_of_equity_afia__working_at__affiliated_with', 'name_of_work_place'])
+    df = merge_columns(df, 'registration_number', ['registration_number', 'registration_no',
+                                                   'board_registration_number', 'board_registration_number_compulsory_for_cpd_issuance',
+                                                   'board_registration_number_compulsory_for_cpd_issuance_if_not_available_indicate_by_n_a',
+                                                   'medical_board_kmpdc__nck__coc__ppb', 'medical_board_number_kmpdc__nck__coc__ppb',
+                                                   'registration_license_number', 'registration_number__compulsory_for_cpd_issuance',
+                                                   'registration_number_compulsory_for_cpd_issuance', 'registration_practice_number',
+                                                   'registration_no2', 'practice__registration_number', 'board_number'])
 
     fields_to_drop = ['approval_status', 'extra_data', 'can_your_email_be_used_for_future_communications',
                       'organisation_affiliation', 'is_guest', 'join_time', 'will_you_require_a_cpd_token_for_this_meeting',
-                      'kmpdc_reg_no', 'leave_time', 'organization_affiliation']
+                      'kmpdc_reg_no', 'leave_time', 'organization_affiliation', 'association', 'association_name',
+                      'attendee_details', 'branch', 'enrollment_number', 'facility_name', 'institution',
+                      'privacy_statement:_we_ensure_any_data_you_provide_is_held_securely_by_supplying_your_contact_information__you_authorize_the_host__and_the_sponsor_of_this_webinar__to_contact_you_with_more_content_and_information_about_products_and_services',
+                      'specialty', 'utm_source', '#', 'are_you_a_person_living_with_a_non_communicable_disease_ncd',
+                      'organization', 'source_name', 'utm_source', '', 'nan', 'utm_campaign', 'type_of_staff',
+                      'designation', 'speciality']
     df.drop(columns=fields_to_drop, inplace=True, errors='ignore')
 
     # Save transformed file locally and upload to GCS
