@@ -128,15 +128,16 @@ def transform_data(entity):
 
     df = merge_columns(df, 'phone_number', ['phone_number', 'mobile_no', 'mobile_number',
                                             'phone_number_for_cpc_issuance_via_sms', 'phone_number_for_cpd_issuance_via_sms',
-                                            'phone', 'mobile'])
+                                            'phone', 'mobile', 'the_critical_role_of_in_vitro_dphonenumber'])
     df = merge_columns(df, 'county', ['county___state___region', 'county', 'state_county_district',
-                                      'county_state_city_district'])
-    df = merge_columns(df, 'country', ['country_region_name', 'country'])
+                                      'county_state_city_district', 'the_critical_role_of_in_vitro_dstate_county_district'])
+    df = merge_columns(df, 'country', ['country_region_name', 'country', 'the_critical_role_of_in_vitro_dcountry'])
     df = merge_columns(df, 'profession', ['profession___cadres', 'cadre', 'cadre__profession', 'profession',
-                                          'profession_cadre', 'specialization', 'specilization'])
+                                          'profession_cadre', 'specialization', 'specilization', 'the_critical_role_of_in_vitro_dprofession'])
     df = merge_columns(df, 'job_title', ['industry_job_title', 'job_title'])
     df = merge_columns(df, 'workplace', ['name_of_the_workplace', 'name_of_equity_afia_working_at_affiliated_with',
-                                         'name_of_equity_afia__working_at__affiliated_with', 'name_of_work_place'])
+                                         'name_of_equity_afia__working_at__affiliated_with', 'name_of_work_place',
+                                         'the_critical_role_of_in_vitro_dorganization_affiliation_workplace'])
     df = merge_columns(df, 'registration_number', ['registration_number', 'registration_no',
                                                    'board_registration_number', 'board_registration_number_compulsory_for_cpd_issuance',
                                                    'board_registration_number_compulsory_for_cpd_issuance_if_not_available_indicate_by_n_a',
