@@ -65,12 +65,14 @@ def sanitize_field_name(name):
     # Replace unsupported characters with underscores
     return name.replace(' ', '_').replace('/', '_').replace('-', '_').replace('?', '') \
         .replace('.', '').replace('(', '').replace(')', '').replace(',', '_').lower()
+
 def merge_columns(df, new_col_name, columns_to_merge):
     existing_columns = [col for col in columns_to_merge if col in df.columns]
     if existing_columns:
         df[new_col_name] = df[existing_columns].bfill(axis=1).iloc[:, 0]
         df.drop(columns=[col for col in existing_columns if col != new_col_name], inplace=True)
     return df
+
 # Define a function to transform the data
 def transform_data(entity):
     client = storage.Client()
@@ -84,29 +86,25 @@ def transform_data(entity):
     df = pd.read_csv(StringIO(content))
 
     def extract_json_to_columns(row):
-        other_info = row['other_info']
-        if isinstance(other_info, str):
-            other_info = other_info.replace("'", '"')
-            try:
-                other_info_dict = json.loads(other_info)
-                # Check if the parsed result is a dictionary
-                if isinstance(other_info_dict, dict):
+        if isinstance(row, pd.Series) and 'other_info' in row:
+            other_info = row['other_info']
+            if isinstance(other_info, str):
+                other_info = other_info.replace("'", '"')
+                try:
+                    other_info_dict = json.loads(other_info)
+                    # Safely remove 'other_info'
+                    row = row.drop('other_info')  
                     for key, value in other_info_dict.items():
                         sanitized_key = sanitize_field_name(key)
                         row[sanitized_key] = value
-                else:
-                    print(f"Expected a dictionary but got: {type(other_info_dict)}")
-
-                del row['other_info']
-                # for key, value in other_info_dict.items():
-                #     sanitized_key = sanitize_field_name(key)
-                #     row[sanitized_key] = value
-                # del row['other_info']
-            except json.JSONDecodeError as e:
-                print(f"JSON Decode Error: {e}")
+                except json.JSONDecodeError as e:
+                    print(f"JSON Decode Error: {e}")
         return row
 
     df = df.apply(extract_json_to_columns, axis=1)
+    # df = df.applymap(extract_json_to_columns)
+    print('*******')
+    print("Columns in DataFrame:", df.columns.tolist())
 
     if 'gender' in df.columns:
         df['gender'] = df['gender'].apply(sanitize_gender)
@@ -143,7 +141,7 @@ def transform_data(entity):
                       'privacy_statement:_we_ensure_any_data_you_provide_is_held_securely_by_supplying_your_contact_information__you_authorize_the_host__and_the_sponsor_of_this_webinar__to_contact_you_with_more_content_and_information_about_products_and_services',
                       'specialty', 'utm_source', '#', 'are_you_a_person_living_with_a_non_communicable_disease_ncd',
                       'organization', 'source_name', 'utm_source', '', 'nan', 'utm_campaign', 'type_of_staff',
-                      'designation', 'speciality', 'user_nameoriginal_name_']
+                      'designation', 'speciality', 'user_nameoriginal_name_', 'ward', 'title', 'location', 'department']
     df.drop(columns=fields_to_drop, inplace=True, errors='ignore')
 
     # Save transformed file locally and upload to GCS
@@ -343,7 +341,7 @@ load_csv_pharma_data_to_bq = GCSToBigQueryOperator(
 load_csv_association_data_to_bq = GCSToBigQueryOperator(
     task_id='load_csv_association_data_to_bq',
     bucket=BQ_BUCKET,
-    source_objects=['hospital_transformed_data.csv'],
+    source_objects=['association_transformed_data.csv'],
     destination_project_dataset_table=f"{BQ_PROJECT}.{BQ_DATASET}.{BQ_TABLE4}",
     create_disposition='CREATE_IF_NEEDED',
     write_disposition='WRITE_TRUNCATE',
