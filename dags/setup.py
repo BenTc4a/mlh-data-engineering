@@ -39,25 +39,6 @@ BQ_BUCKET = 'tc4a-backet'
 PG_CON_ID = "postgres_default"
 PG_SCHEMA = "public"
 
-# Define tables from postgresql db
-PG_TABLE1 = "lecture_watch_times"
-PG_TABLE2 = "courses"
-PG_TABLE3 = "lectures"
-PG_TABLE4 = "organizations"
-PG_TABLE5 = "professions"
-PG_TABLE6 = "course_enrollments"
-PG_TABLE7 = "accounts"
-PG_TABLE8 = "stream_zoomreports"
-PG_TABLE9 = "stream_attendee"
-
-# events, enrolments, attendance
-
-# Define Json files stored in the GCP bucket
-JSON_FILENAME1 = 'ngos_report_' + datetime.now().strftime('%Y-%m-%d') + '.json'
-JSON_FILENAME2 = 'hospitals_report_' + datetime.now().strftime('%Y-%m-%d') + '.json'
-JSON_FILENAME3 = 'pharmas_report_' + datetime.now().strftime('%Y-%m-%d') + '.json'
-JSON_FILENAME4 = 'associations_report_' + datetime.now().strftime('%Y-%m-%d') + '.json'
-
 def standardize_country_name(country_name):
     """
     Function to standardize country names.
@@ -103,15 +84,24 @@ def transform_data(entity):
     df = pd.read_csv(StringIO(content))
 
     def extract_json_to_columns(row):
-        extra_data = row['extra_data']
-        if isinstance(extra_data, str):
-            extra_data = extra_data.replace("'", '"')
+        other_info = row['other_info']
+        if isinstance(other_info, str):
+            other_info = other_info.replace("'", '"')
             try:
-                extra_data_dict = json.loads(extra_data)
-                for key, value in extra_data_dict.items():
-                    sanitized_key = sanitize_field_name(key)
-                    row[sanitized_key] = value
-                del row['extra_data']
+                other_info_dict = json.loads(other_info)
+                # Check if the parsed result is a dictionary
+                if isinstance(other_info_dict, dict):
+                    for key, value in other_info_dict.items():
+                        sanitized_key = sanitize_field_name(key)
+                        row[sanitized_key] = value
+                else:
+                    print(f"Expected a dictionary but got: {type(other_info_dict)}")
+
+                del row['other_info']
+                # for key, value in other_info_dict.items():
+                #     sanitized_key = sanitize_field_name(key)
+                #     row[sanitized_key] = value
+                # del row['other_info']
             except json.JSONDecodeError as e:
                 print(f"JSON Decode Error: {e}")
         return row
@@ -146,14 +136,14 @@ def transform_data(entity):
                                                    'registration_number_compulsory_for_cpd_issuance', 'registration_practice_number',
                                                    'registration_no2', 'practice__registration_number', 'board_number'])
 
-    fields_to_drop = ['approval_status', 'extra_data', 'can_your_email_be_used_for_future_communications',
+    fields_to_drop = ['approval_status', 'other_info', 'can_your_email_be_used_for_future_communications',
                       'organisation_affiliation', 'is_guest', 'join_time', 'will_you_require_a_cpd_token_for_this_meeting',
                       'kmpdc_reg_no', 'leave_time', 'organization_affiliation', 'association', 'association_name',
                       'attendee_details', 'branch', 'enrollment_number', 'facility_name', 'institution',
                       'privacy_statement:_we_ensure_any_data_you_provide_is_held_securely_by_supplying_your_contact_information__you_authorize_the_host__and_the_sponsor_of_this_webinar__to_contact_you_with_more_content_and_information_about_products_and_services',
                       'specialty', 'utm_source', '#', 'are_you_a_person_living_with_a_non_communicable_disease_ncd',
                       'organization', 'source_name', 'utm_source', '', 'nan', 'utm_campaign', 'type_of_staff',
-                      'designation', 'speciality']
+                      'designation', 'speciality', 'user_nameoriginal_name_']
     df.drop(columns=fields_to_drop, inplace=True, errors='ignore')
 
     # Save transformed file locally and upload to GCS
@@ -173,7 +163,7 @@ postgres_hospital_report_to_gcs = PostgresToGCSOperator(
              o.category AS organization_category,
              ee.attended AS attended,
              to_char(ee.enrollment_date, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS registration_time,
-             eu.extra_data
+             eu.other_info
            FROM public.organization_organization o
            LEFT JOIN public.events_event_specialization s ON o.id = s.event_id
            LEFT JOIN public.events_event e ON o.id = e.organization_id_id
@@ -204,7 +194,7 @@ postgres_ngo_report_to_gcs = PostgresToGCSOperator(
              o.category AS organization_category,
              ee.attended AS attended,
              to_char(ee.enrollment_date, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS registration_time,
-             eu.extra_data
+             eu.other_info
            FROM public.organization_organization o
            LEFT JOIN public.events_event_specialization s ON o.id = s.event_id
            LEFT JOIN public.events_event e ON o.id = e.organization_id_id
@@ -235,7 +225,7 @@ postgres_pharma_report_to_gcs = PostgresToGCSOperator(
              o.category AS organization_category,
              ee.attended AS attended,
              to_char(ee.enrollment_date, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS registration_time,
-             eu.extra_data
+             eu.other_info
            FROM public.organization_organization o
            LEFT JOIN public.events_event_specialization s ON o.id = s.event_id
            LEFT JOIN public.events_event e ON o.id = e.organization_id_id
@@ -266,7 +256,7 @@ postgres_association_report_to_gcs = PostgresToGCSOperator(
              o.category AS organization_category,
              ee.attended AS attended,
              to_char(ee.enrollment_date, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS registration_time,
-             eu.extra_data
+             eu.other_info
            FROM public.organization_organization o
            LEFT JOIN public.events_event_specialization s ON o.id = s.event_id
            LEFT JOIN public.events_event e ON o.id = e.organization_id_id
